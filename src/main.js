@@ -213,17 +213,21 @@ group.rotation.z =
   Math.cos(elapsed * 0.8) * 0.5;
   }
 
-camera.position.x =
-  Math.sin(elapsed * 2) * 0.5;
+  const camRadius = 4.2;
 
-camera.position.y =
-  Math.cos(elapsed * 2) * 0.5;
-
-camera.position.z =
-  4 +
-  Math.sin(elapsed * 2) * 0.5;
-
-camera.lookAt(0, 0, 0);
+  camera.position.x =
+      Math.sin(elapsed * 0.18) *
+      camRadius;
+  
+  camera.position.z =
+      Math.cos(elapsed * 0.18) *
+      camRadius;
+  
+  camera.position.y =
+      Math.sin(elapsed * 0.11) *
+      0.65;
+  
+  camera.lookAt(0,0,0);
 
 controls.update();
 composer.render();}

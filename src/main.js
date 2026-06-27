@@ -143,22 +143,56 @@ function animate() {
       startMorph();
     } else if (phase === "morph") {
       const rawProgress = Math.min(phaseElapsed / MORPH_DURATION, 1);
-      cloud.update(easeInOutCubic(rawProgress), elapsed);
+      const p = easeInOutCubic(rawProgress);
+
+cloud.material.uniforms.uTurbulence.value =
+THREE.MathUtils.lerp(
+
+0.25,
+
+1.35,
+
+Math.sin(p*Math.PI)
+
+);
+
+cloud.update(p,elapsed);
 
       if (rawProgress >= 1) {
+        
         currentIndex = nextIndex;
         phase = "rest";
         phaseElapsed = 0;
       }
     }
 
-    const targetSpeed = phase === "morph" ? 0.32 : 0.12;
-    rotationSpeed = THREE.MathUtils.lerp(rotationSpeed, targetSpeed, 0.04);
-    group.rotation.y += rotationSpeed * dt;
+    const targetSpeed = phase === "morph" ? 0.45 : 0.15;
+rotationSpeed = THREE.MathUtils.lerp(rotationSpeed, targetSpeed, 0.04);
+
+group.rotation.y += rotationSpeed * dt;
+
+// oscillazione morbida sugli altri assi
+group.rotation.x =
+  Math.sin(elapsed * 0.8) * 0.5;
+
+group.rotation.z =
+  Math.cos(elapsed * 0.8) * 0.5;
   }
 
-  controls.update();
-  renderer.render(scene, camera);
+camera.position.x =
+  Math.sin(elapsed * 2) * 0.5;
+
+camera.position.y =
+  Math.cos(elapsed * 2) * 0.5;
+
+camera.position.z =
+  4 +
+  Math.sin(elapsed * 2) * 0.5;
+
+camera.lookAt(0, 0, 0);
+
+controls.update();
+renderer.render(scene, camera);
 }
 
 init();

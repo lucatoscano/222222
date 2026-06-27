@@ -1,60 +1,165 @@
-import './style.css'
-import javascriptLogo from './assets/javascript.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import { setupCounter } from './counter.js'
+import "./style.css";
+import * as THREE from "three";
+import { OrbitControls, OBJLoader } from "three-stdlib";
+import SurfaceSampler from "./SurfaceSampler.js";
+import ParticleCloud from "./ParticleCloud.js";
 
-document.querySelector('#app').innerHTML = `
-<section id="center">
-  <div class="hero">
-    <img src="${heroImg}" class="base" width="170" height="179">
-    <img src="${javascriptLogo}" class="framework" alt="JavaScript logo"/>
-    <img src="${viteLogo}" class="vite" alt="Vite logo" />
-  </div>
-  <div>
-    <h1>Get started</h1>
-    <p>Edit <code>src/main.js</code> and save to test <code>HMR</code></p>
-  </div>
-  <button id="counter" type="button" class="counter"></button>
-</section>
+// 120k è già molto denso e mantiene rapido l'avvio anche con tre forme.
+// Su una macchina potente puoi riportarlo a 300000.
+const PARTICLE_COUNT = 120000;
+const MORPH_DURATION = 2.8;
+const REST_DURATION = 3.5;
+const MAX_MODELS = 12;
 
-<div class="ticks"></div>
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x090909);
 
-<section id="next-steps">
-  <div id="docs">
-    <svg class="icon" role="presentation" aria-hidden="true"><use href="/icons.svg#documentation-icon"></use></svg>
-    <h2>Documentation</h2>
-    <p>Your questions, answered</p>
-    <ul>
-      <li>
-        <a href="https://vite.dev/" target="_blank">
-          <img class="logo" src="${viteLogo}" alt="" />
-          Explore Vite
-        </a>
-      </li>
-      <li>
-        <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript" target="_blank">
-          <img class="button-icon" src="${javascriptLogo}" alt="">
-          Learn more
-        </a>
-      </li>
-    </ul>
-  </div>
-  <div id="social">
-    <svg class="icon" role="presentation" aria-hidden="true"><use href="/icons.svg#social-icon"></use></svg>
-    <h2>Connect with us</h2>
-    <p>Join the Vite community</p>
-    <ul>
-      <li><a href="https://github.com/vitejs/vite" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#github-icon"></use></svg>GitHub</a></li>
-      <li><a href="https://chat.vite.dev/" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#discord-icon"></use></svg>Discord</a></li>
-      <li><a href="https://x.com/vite_js" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#x-icon"></use></svg>X.com</a></li>
-      <li><a href="https://bsky.app/profile/vite.dev" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#bluesky-icon"></use></svg>Bluesky</a></li>
-    </ul>
-  </div>
-</section>
+const camera = new THREE.PerspectiveCamera(
+  60,
+  window.innerWidth / window.innerHeight,
+  0.1,
+  100
+);
+camera.position.set(0, 0, 4);
 
-<div class="ticks"></div>
-<section id="spacer"></section>
-`
+const renderer = new THREE.WebGLRenderer({
+  antialias: true,
+  powerPreference: "high-performance",
+});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
 
-setupCounter(document.querySelector('#counter'))
+document.body.innerHTML = `
+  <div class="status" aria-live="polite">Caricamento forme…</div>
+  <div class="hint">spazio · forma successiva</div>
+`;
+document.body.prepend(renderer.domElement);
+
+const status = document.querySelector(".status");
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.enablePan = false;
+
+const group = new THREE.Group();
+scene.add(group);
+
+const shapes = [];
+let cloud = null;
+let currentIndex = 0;
+let nextIndex = 1;
+let phase = "loading";
+let phaseElapsed = 0;
+let rotationSpeed = 0.12;
+
+function easeInOutCubic(t) {
+  return t < 0.5
+    ? 4 * t * t * t
+    : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+
+async function loadOBJ(path) {
+  const response = await fetch(path);
+  if (!response.ok) throw new Error(`Impossibile caricare ${path}`);
+
+  const source = await response.text();
+  if (source.trimStart().startsWith("<")) {
+    throw new Error(`${path} non esiste`);
+  }
+
+  const object = new OBJLoader().parse(source);
+  return SurfaceSampler.sample(object, PARTICLE_COUNT);
+}
+
+async function loadAllModels() {
+  for (let i = 1; i <= MAX_MODELS; i++) {
+    const path = `/models/${i}.obj`;
+
+    try {
+      status.textContent = `Campionamento forma ${i}…`;
+      shapes.push(await loadOBJ(path));
+    } catch (error) {
+      if (i === 1) throw error;
+      break;
+    }
+  }
+
+  if (shapes.length < 2) {
+    throw new Error("Servono almeno due OBJ in public/models.");
+  }
+}
+
+function startMorph() {
+  if (!cloud || phase === "morph") return;
+
+  nextIndex = (currentIndex + 1) % shapes.length;
+  cloud.setMorph(shapes[currentIndex], shapes[nextIndex]);
+  phase = "morph";
+  phaseElapsed = 0;
+}
+
+async function init() {
+  try {
+    await loadAllModels();
+
+    cloud = new ParticleCloud(shapes[0]);
+    group.add(cloud.points);
+    phase = "rest";
+    phaseElapsed = 0;
+
+    status.textContent = `${shapes.length} forme · ${PARTICLE_COUNT.toLocaleString("it-IT")} punti`;
+    window.setTimeout(() => status.classList.add("is-hidden"), 1800);
+  } catch (error) {
+    console.error(error);
+    status.textContent = error.message;
+    status.classList.add("is-error");
+  }
+}
+
+window.addEventListener("keydown", (event) => {
+  if (event.code === "Space") {
+    event.preventDefault();
+    startMorph();
+  }
+});
+
+window.addEventListener("resize", () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+const clock = new THREE.Clock();
+
+function animate() {
+  requestAnimationFrame(animate);
+
+  const dt = Math.min(clock.getDelta(), 0.05);
+  const elapsed = clock.elapsedTime;
+
+  if (cloud) {
+    phaseElapsed += dt;
+
+    if (phase === "rest" && phaseElapsed >= REST_DURATION) {
+      startMorph();
+    } else if (phase === "morph") {
+      const rawProgress = Math.min(phaseElapsed / MORPH_DURATION, 1);
+      cloud.update(easeInOutCubic(rawProgress), elapsed);
+
+      if (rawProgress >= 1) {
+        currentIndex = nextIndex;
+        phase = "rest";
+        phaseElapsed = 0;
+      }
+    }
+
+    const targetSpeed = phase === "morph" ? 0.32 : 0.12;
+    rotationSpeed = THREE.MathUtils.lerp(rotationSpeed, targetSpeed, 0.04);
+    group.rotation.y += rotationSpeed * dt;
+  }
+
+  controls.update();
+  renderer.render(scene, camera);
+}
+
+init();
+animate();

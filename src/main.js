@@ -1,5 +1,8 @@
 import "./style.css";
 import * as THREE from "three";
+import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
+import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import { OrbitControls, OBJLoader } from "three-stdlib";
 import SurfaceSampler from "./SurfaceSampler.js";
 import ParticleCloud from "./ParticleCloud.js";
@@ -26,8 +29,35 @@ const renderer = new THREE.WebGLRenderer({
   antialias: true,
   powerPreference: "high-performance",
 });
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+
+renderer.toneMappingExposure = 1.15;
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
+const composer = new EffectComposer(renderer);
+
+const renderPass = new RenderPass(scene, camera);
+
+composer.addPass(renderPass);
+
+const bloomPass = new UnrealBloomPass(
+
+    new THREE.Vector2(
+        window.innerWidth,
+        window.innerHeight
+    ),
+
+    0.25,   // intensità
+
+    0.45,   // raggio
+
+    0.65   // threshold
+
+);
+
+composer.addPass(bloomPass);
 
 document.body.innerHTML = `
   <div class="status" aria-live="polite">Caricamento forme…</div>
@@ -126,6 +156,10 @@ window.addEventListener("resize", () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
+  composer.setSize(
+    window.innerWidth,
+    window.innerHeight
+);
 });
 
 const clock = new THREE.Clock();
@@ -192,8 +226,7 @@ camera.position.z =
 camera.lookAt(0, 0, 0);
 
 controls.update();
-renderer.render(scene, camera);
-}
+composer.render();}
 
 init();
 animate();

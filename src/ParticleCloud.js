@@ -88,16 +88,25 @@ vDepth = depth;
 vAlpha =
     1.0 - depth;
 
-float perspective =
-    320.0 /
+    float perspective =
+    300.0 /
     max(1.0,-mvPosition.z);
+
+float pulse =
+    1.0 +
+    0.10 *
+    sin(
+        uTime * 1.2 +
+        seed * 18.0
+    );
 
 gl_PointSize =
     uPointSize *
     perspective *
+    pulse *
     mix(
-        3.0,
-        0.2,
+        1.15,
+        0.85,
         depth
     );
 }

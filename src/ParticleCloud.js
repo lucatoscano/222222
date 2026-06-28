@@ -17,6 +17,10 @@ void main(){
 
     vec3 p = mix(position, targetPosition, uProgress);
 
+// Disattiva tutto il resto
+// p *= 1.0 + breathe;
+// p += flow * amplitude * envelope;
+
     float seed = hash(position);
 
     // Respirazione globale della forma
@@ -100,7 +104,7 @@ float pulse =
         seed * 18.0
     );
 
-gl_PointSize =
+    gl_PointSize =
     uPointSize *
     perspective *
     pulse *
@@ -121,7 +125,7 @@ void main(){
             vec2(0.5)
         );
 
-    if(d>0.5) discard;
+   if(d>0.5) discard;
 
     float alpha =
         1.0 -
@@ -146,27 +150,27 @@ export default class ParticleCloud{
 
         this.geometry = new THREE.BufferGeometry();
 
-        this.geometry.setAttribute(
+        this.positionAttribute =
+    new THREE.BufferAttribute(
+        new Float32Array(positions),
+        3
+    );
 
-            "position",
+this.targetAttribute =
+    new THREE.BufferAttribute(
+        new Float32Array(positions),
+        3
+    );
 
-            new THREE.BufferAttribute(
-                positions,
-                3
-            )
+this.geometry.setAttribute(
+    "position",
+    this.positionAttribute
+);
 
-        );
-
-        this.geometry.setAttribute(
-
-            "targetPosition",
-
-            new THREE.BufferAttribute(
-                positions,
-                3
-            )
-
-        );
+this.geometry.setAttribute(
+    "targetPosition",
+    this.targetAttribute
+);
 
         this.material =
             new THREE.ShaderMaterial({
@@ -190,6 +194,7 @@ export default class ParticleCloud{
                 transparent:true,
 
                 depthWrite:false,
+                depthTest:false,
 
                 blending:THREE.AdditiveBlending
 
@@ -208,30 +213,16 @@ export default class ParticleCloud{
 
     setMorph(fromPositions,toPositions){
 
-        this.geometry.setAttribute(
-
-            "position",
-
-            new THREE.BufferAttribute(
-                fromPositions,
-                3
-            )
-
-        );
-
-        this.geometry.setAttribute(
-
-            "targetPosition",
-
-            new THREE.BufferAttribute(
-                toPositions,
-                3
-            )
-
-        );
-
-        this.material.uniforms.uProgress.value=0;
-
+        this.positionAttribute.array.set(fromPositions);
+    
+        this.targetAttribute.array.set(toPositions);
+    
+        this.positionAttribute.needsUpdate = true;
+    
+        this.targetAttribute.needsUpdate = true;
+    
+        this.material.uniforms.uProgress.value = 0;
+    
     }
 
     update(progress,elapsedTime){

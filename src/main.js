@@ -119,6 +119,15 @@ async function loadAllModels() {
 }
 
 function startMorph() {
+  console.log("START MORPH");
+
+console.log(
+    cloud.geometry.attributes.position.array === shapes[currentIndex]
+);
+
+console.log(
+    cloud.geometry.attributes.targetPosition.array === shapes[nextIndex]
+);
   if (!cloud || phase === "morph") return;
 
   nextIndex = (currentIndex + 1) % shapes.length;

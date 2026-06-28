@@ -7,8 +7,6 @@ import { OrbitControls, OBJLoader } from "three-stdlib";
 import SurfaceSampler from "./SurfaceSampler.js";
 import ParticleCloud from "./ParticleCloud.js";
 
-// 120k è già molto denso e mantiene rapido l'avvio anche con tre forme.
-// Su una macchina potente puoi riportarlo a 300000.
 const PARTICLE_COUNT = 120000;
 const MORPH_DURATION = 2.8;
 const REST_DURATION = 3.5;
@@ -30,33 +28,21 @@ const renderer = new THREE.WebGLRenderer({
   powerPreference: "high-performance",
 });
 renderer.outputColorSpace = THREE.SRGBColorSpace;
-
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-
 renderer.toneMappingExposure = 1.15;
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
+
 const composer = new EffectComposer(renderer);
-
 const renderPass = new RenderPass(scene, camera);
-
 composer.addPass(renderPass);
 
 const bloomPass = new UnrealBloomPass(
-
-    new THREE.Vector2(
-        window.innerWidth,
-        window.innerHeight
-    ),
-
-    0.25,   // intensità
-
-    0.45,   // raggio
-
-    0.65   // threshold
-
+  new THREE.Vector2(window.innerWidth, window.innerHeight),
+  0.25,  // intensità
+  0.45,  // raggio
+  0.65   // threshold
 );
-
 composer.addPass(bloomPass);
 
 document.body.innerHTML = `
@@ -103,7 +89,6 @@ async function loadOBJ(path) {
 async function loadAllModels() {
   for (let i = 1; i <= MAX_MODELS; i++) {
     const path = `/models/${i}.obj`;
-
     try {
       status.textContent = `Campionamento forma ${i}…`;
       shapes.push(await loadOBJ(path));
@@ -119,19 +104,16 @@ async function loadAllModels() {
 }
 
 function startMorph() {
-  console.log("START MORPH");
-
-console.log(
-    cloud.geometry.attributes.position.array === shapes[currentIndex]
-);
-
-console.log(
-    cloud.geometry.attributes.targetPosition.array === shapes[nextIndex]
-);
   if (!cloud || phase === "morph") return;
 
   nextIndex = (currentIndex + 1) % shapes.length;
+
+  // FIX: passiamo shapes[currentIndex] come "from" — che coincide già
+  // con i valori attuali di positionAttribute (aggiornati da setMorph
+  // precedente o dall'inizializzazione). In questo modo non c'è mai
+  // un frame dove le particelle appaiono nella posizione sbagliata.
   cloud.setMorph(shapes[currentIndex], shapes[nextIndex]);
+
   phase = "morph";
   phaseElapsed = 0;
 }
@@ -165,10 +147,7 @@ window.addEventListener("resize", () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
-  composer.setSize(
-    window.innerWidth,
-    window.innerHeight
-);
+  composer.setSize(window.innerWidth, window.innerHeight);
 });
 
 const clock = new THREE.Clock();
@@ -188,21 +167,18 @@ function animate() {
       const rawProgress = Math.min(phaseElapsed / MORPH_DURATION, 1);
       const p = easeInOutCubic(rawProgress);
 
-cloud.material.uniforms.uTurbulence.value =
-THREE.MathUtils.lerp(
+      cloud.material.uniforms.uTurbulence.value = THREE.MathUtils.lerp(
+        0.25,
+        1.35,
+        Math.sin(p * Math.PI)
+      );
 
-0.25,
-
-1.35,
-
-Math.sin(p*Math.PI)
-
-);
-
-cloud.update(p,elapsed);
+      cloud.update(p, elapsed);
 
       if (rawProgress >= 1) {
-        
+        // FIX: al termine del morph sincronizziamo currentIndex.
+        // Non serve toccare i buffer qui: setMorph del prossimo ciclo
+        // li aggiornerà correttamente partendo da shapes[currentIndex].
         currentIndex = nextIndex;
         phase = "rest";
         phaseElapsed = 0;
@@ -210,36 +186,22 @@ cloud.update(p,elapsed);
     }
 
     const targetSpeed = phase === "morph" ? 0.45 : 0.15;
-rotationSpeed = THREE.MathUtils.lerp(rotationSpeed, targetSpeed, 0.04);
+    rotationSpeed = THREE.MathUtils.lerp(rotationSpeed, targetSpeed, 0.04);
 
-group.rotation.y += rotationSpeed * dt;
-
-// oscillazione morbida sugli altri assi
-group.rotation.x =
-  Math.sin(elapsed * 0.8) * 0.5;
-
-group.rotation.z =
-  Math.cos(elapsed * 0.8) * 0.5;
+    group.rotation.y += rotationSpeed * dt;
+    group.rotation.x = Math.sin(elapsed * 0.8) * 0.5;
+    group.rotation.z = Math.cos(elapsed * 0.8) * 0.5;
   }
 
   const camRadius = 4.2;
+  camera.position.x = Math.sin(elapsed * 0.18) * camRadius;
+  camera.position.z = Math.cos(elapsed * 0.18) * camRadius;
+  camera.position.y = Math.sin(elapsed * 0.11) * 0.65;
+  camera.lookAt(0, 0, 0);
 
-  camera.position.x =
-      Math.sin(elapsed * 0.18) *
-      camRadius;
-  
-  camera.position.z =
-      Math.cos(elapsed * 0.18) *
-      camRadius;
-  
-  camera.position.y =
-      Math.sin(elapsed * 0.11) *
-      0.65;
-  
-  camera.lookAt(0,0,0);
-
-controls.update();
-composer.render();}
+  controls.update();
+  composer.render();
+}
 
 init();
 animate();

@@ -9,7 +9,7 @@ import ParticleCloud from "./ParticleCloud.js";
 import { BokehPass } from "three/examples/jsm/postprocessing/BokehPass.js";
 import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass.js";
 import FinalPass from "./FinalPass.js";
-import BackgroundSphere from "./BackgroundSphere.js";
+
 
 const PARTICLE_COUNT = 120000;
 const MORPH_DURATION = 2.8;
@@ -17,7 +17,7 @@ const REST_DURATION = 3.5;
 const MAX_MODELS = 12;
 
 const scene = new THREE.Scene();
-scene.background = null;
+scene.background = new THREE.Color(0x090909);
 
 const camera = new THREE.PerspectiveCamera(
   60,
@@ -76,9 +76,6 @@ controls.enablePan = false;
 
 const group = new THREE.Group();
 scene.add(group);
-const background = BackgroundSphere();
-
-scene.add(background);
 const target = new THREE.Vector3();
 
 const shapes = [];
@@ -179,8 +176,6 @@ function animate() {
 
   const dt = Math.min(clock.getDelta(), 0.05);
   const elapsed = clock.elapsedTime;
-  background.material.uniforms.uTime.value =
-    elapsed;
   finalPass.uniforms.uTime.value = elapsed;
   
   const cameraDistance = camera.position.length();

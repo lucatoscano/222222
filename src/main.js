@@ -9,6 +9,7 @@ import ParticleCloud from "./ParticleCloud.js";
 import { BokehPass } from "three/examples/jsm/postprocessing/BokehPass.js";
 import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass.js";
 import FinalPass from "./FinalPass.js";
+import ParticleField from "./ParticleField.js";
 
 
 const PARTICLE_COUNT = 120000;
@@ -17,16 +18,6 @@ const REST_DURATION = 3.5;
 const MAX_MODELS = 12;
 
 const scene = new THREE.Scene();
-const feedbackScene = new THREE.Scene();
-
-const feedbackCamera = new THREE.OrthographicCamera(
-    -1,
-     1,
-     1,
-    -1,
-     0,
-     1
-);
 scene.background = new THREE.Color(0x090909);
 
 const camera = new THREE.PerspectiveCamera(
@@ -46,21 +37,6 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.15;
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
-const renderTarget = new THREE.WebGLRenderTarget(
-
-  window.innerWidth,
-
-  window.innerHeight,
-
-  {
-
-      type: THREE.HalfFloatType,
-
-      depthBuffer: false
-
-  }
-
-);
 
 const composer = new EffectComposer(renderer);
 const renderPass = new RenderPass(scene, camera);
@@ -101,6 +77,9 @@ controls.enablePan = false;
 
 const group = new THREE.Group();
 scene.add(group);
+const field = new ParticleField();
+
+scene.add(field.points);
 const target = new THREE.Vector3();
 
 const shapes = [];

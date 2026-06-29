@@ -6,6 +6,9 @@ import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPa
 import { OrbitControls, OBJLoader } from "three-stdlib";
 import SurfaceSampler from "./SurfaceSampler.js";
 import ParticleCloud from "./ParticleCloud.js";
+import { BokehPass } from "three/examples/jsm/postprocessing/BokehPass.js";
+import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass.js";
+import FinalPass from "./FinalPass.js";
 
 const PARTICLE_COUNT = 120000;
 const MORPH_DURATION = 2.8;
@@ -44,6 +47,20 @@ const bloomPass = new UnrealBloomPass(
   0.65   // threshold
 );
 composer.addPass(bloomPass);
+const finalPass = new ShaderPass(FinalPass);
+
+composer.addPass(finalPass);
+const bokehPass = new BokehPass(scene, camera, {
+
+  focus: 4.0,
+
+  aperture: 0.00002,
+
+  maxblur: 0.004
+
+});
+
+composer.addPass(bokehPass);
 
 document.body.innerHTML = `
   <div class="status" aria-live="polite">Caricamento forme…</div>
@@ -157,6 +174,12 @@ function animate() {
 
   const dt = Math.min(clock.getDelta(), 0.05);
   const elapsed = clock.elapsedTime;
+  finalPass.uniforms.uTime.value = elapsed;
+  
+  const cameraDistance = camera.position.length();
+
+bokehPass.materialBokeh.uniforms.focus.value =
+    cameraDistance * 0.95;
 
   if (cloud) {
     phaseElapsed += dt;

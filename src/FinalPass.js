@@ -12,7 +12,9 @@ const FinalPass = {
 
         grainStrength: { value: 0.025 },
 
-        chroma: { value: 0.0018 }
+        chroma: { value: 0.0018 },
+        posterize:  { value: 5.0 },
+        ditherStr:  { value: 0.8 }
 
     },
 
@@ -47,6 +49,8 @@ const FinalPass = {
         uniform float grainStrength;
 
         uniform float chroma;
+        uniform float posterize;
+        uniform float ditherStr;
 
         varying vec2 vUv;
 
@@ -70,6 +74,23 @@ const FinalPass = {
 
             );
 
+        }
+
+        // Matrice Bayer 4x4 per dithering ordinato
+        float bayer4(vec2 p) {
+            int x = int(mod(p.x, 4.0));
+            int y = int(mod(p.y, 4.0));
+            int index = x + y * 4;
+            float m[16];
+            m[0]=0.0;  m[1]=8.0;  m[2]=2.0;  m[3]=10.0;
+            m[4]=12.0; m[5]=4.0;  m[6]=14.0; m[7]=6.0;
+            m[8]=3.0;  m[9]=11.0; m[10]=1.0; m[11]=9.0;
+            m[12]=15.0;m[13]=7.0; m[14]=13.0;m[15]=5.0;
+            return m[index] / 16.0;
+        }
+
+        vec3 posterizeColor(vec3 c, float levels) {
+            return floor(c * levels + 0.5) / levels;
         }
 
         void main(){
@@ -121,7 +142,8 @@ vec2 offset =
             vec3 color = vec3(r,g,b);
 
             // Contrasto morbido
-color = pow(color, vec3(0.92));
+            color = pow(color, vec3(0.7));
+            color = clamp(color * 1.4, 0.0, 1.0);
 
 // Leggero S-Curve
 color = smoothstep(0.0, 1.0, color);
@@ -157,6 +179,13 @@ color.r += color.r * 0.015;
                 )-0.5;
 
             color += grain * grainStrength;
+            // Dithering Bayer
+            vec2 pixelCoord = vUv * vec2(1280.0, 720.0);
+            float threshold = bayer4(pixelCoord) * ditherStr;
+            color += (threshold - 0.5) * 0.12;
+
+            // Posterize
+            color = posterizeColor(color, posterize);
 
             gl_FragColor =
 

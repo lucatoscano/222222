@@ -36,7 +36,7 @@ const renderer = new THREE.WebGLRenderer({
 });
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.15;
+renderer.toneMappingExposure = 0.7;
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
 
@@ -46,9 +46,9 @@ composer.addPass(renderPass);
 
 const bloomPass = new UnrealBloomPass(
   new THREE.Vector2(window.innerWidth, window.innerHeight),
-  0.25,  // intensità
-  0.45,  // raggio
-  0.65   // threshold
+  0.15,  // intensità
+  0.3,  // raggio
+  0.85   // threshold
 );
 composer.addPass(bloomPass);
 const finalPass = new ShaderPass(FinalPass);

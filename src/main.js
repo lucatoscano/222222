@@ -9,6 +9,7 @@ import ParticleCloud from "./ParticleCloud.js";
 import { BokehPass } from "three/examples/jsm/postprocessing/BokehPass.js";
 import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass.js";
 import FinalPass from "./FinalPass.js";
+import BackgroundSphere from "./BackgroundSphere.js";
 
 const PARTICLE_COUNT = 120000;
 const MORPH_DURATION = 2.8;
@@ -16,7 +17,7 @@ const REST_DURATION = 3.5;
 const MAX_MODELS = 12;
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x090909);
+scene.background = null;
 
 const camera = new THREE.PerspectiveCamera(
   60,
@@ -75,6 +76,10 @@ controls.enablePan = false;
 
 const group = new THREE.Group();
 scene.add(group);
+const background = BackgroundSphere();
+
+scene.add(background);
+const target = new THREE.Vector3();
 
 const shapes = [];
 let cloud = null;
@@ -174,6 +179,8 @@ function animate() {
 
   const dt = Math.min(clock.getDelta(), 0.05);
   const elapsed = clock.elapsedTime;
+  background.material.uniforms.uTime.value =
+    elapsed;
   finalPass.uniforms.uTime.value = elapsed;
   
   const cameraDistance = camera.position.length();
@@ -190,11 +197,51 @@ bokehPass.materialBokeh.uniforms.focus.value =
       const rawProgress = Math.min(phaseElapsed / MORPH_DURATION, 1);
       const p = easeInOutCubic(rawProgress);
 
-      cloud.material.uniforms.uTurbulence.value = THREE.MathUtils.lerp(
-        0.25,
-        1.35,
-        Math.sin(p * Math.PI)
-      );
+      const morphEnergy = Math.sin(p * Math.PI);
+
+cloud.material.uniforms.uTurbulence.value =
+    THREE.MathUtils.lerp(
+        0.20,
+        1.10,
+        morphEnergy
+    );
+
+bloomPass.strength =
+    THREE.MathUtils.lerp(
+        0.18,
+        0.42,
+        morphEnergy
+    );
+
+bloomPass.radius =
+    THREE.MathUtils.lerp(
+        0.35,
+        0.55,
+        morphEnergy
+    );
+
+renderer.toneMappingExposure =
+    THREE.MathUtils.lerp(
+        1.05,
+        1.20,
+        morphEnergy
+    );
+
+cloud.update(p, elapsed);
+
+bloomPass.strength =
+    THREE.MathUtils.lerp(
+        0.18,
+        0.55,
+        morphEnergy
+    );
+
+bloomPass.radius =
+    THREE.MathUtils.lerp(
+        0.35,
+        0.65,
+        morphEnergy
+    );
 
       cloud.update(p, elapsed);
 
@@ -216,12 +263,36 @@ bokehPass.materialBokeh.uniforms.focus.value =
     group.rotation.z = Math.cos(elapsed * 0.8) * 0.5;
   }
 
-  const camRadius = 4.2;
-  camera.position.x = Math.sin(elapsed * 0.18) * camRadius;
-  camera.position.z = Math.cos(elapsed * 0.18) * camRadius;
-  camera.position.y = Math.sin(elapsed * 0.11) * 0.65;
-  camera.lookAt(0, 0, 0);
+  const orbitTime = elapsed * 0.12;
 
+  const radius = 4.15;
+  
+  camera.position.set(
+  
+      Math.cos(orbitTime) * radius,
+  
+      Math.sin(elapsed * 0.10) * 0.35,
+  
+      Math.sin(orbitTime) * radius
+  
+  );
+  
+  controls.target.lerp(
+  
+      new THREE.Vector3(
+  
+          Math.sin(elapsed * 0.08) * 0.05,
+  
+          Math.cos(elapsed * 0.06) * 0.03,
+  
+          0
+  
+      ),
+  
+      0.02
+  
+  );
+  
   controls.update();
   composer.render();
 }

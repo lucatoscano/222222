@@ -80,7 +80,19 @@ const FinalPass = {
 
             float dist = length(center);
 
-            vec2 offset = center * chroma;
+            float edge =
+    0.35 +
+    0.65 *
+    smoothstep(
+        0.20,
+        0.80,
+        dist
+    );
+
+vec2 offset =
+    center *
+    chroma *
+    edge;
 
             float r = texture2D(
 
@@ -107,6 +119,18 @@ const FinalPass = {
             ).b;
 
             vec3 color = vec3(r,g,b);
+
+            // Contrasto morbido
+color = pow(color, vec3(0.92));
+
+// Leggero S-Curve
+color = smoothstep(0.0, 1.0, color);
+
+// Ombre leggermente fredde
+color.b += (1.0 - color.r) * 0.02;
+
+// Alte luci leggermente calde
+color.r += color.r * 0.015;
 
             float vignette =
 

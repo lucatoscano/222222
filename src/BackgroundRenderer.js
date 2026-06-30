@@ -124,6 +124,12 @@ export default class BackgroundRenderer {
     [0xcc2200, 0x3a0a00],   // rosso/rosso scuro
     [0x0a0aff, 0x000033],   // blu/blu scuro
     [0xcc6600, 0x000000],   // arancio/nero
+    [0x00aa55, 0x000000],   // verde smeraldo/nero
+    [0xaa00cc, 0x000000],   // viola/nero
+    [0xffcc00, 0x1a0a00],   // oro/marrone scuro
+    [0x00cccc, 0x001a1a],   // ciano/petrolio
+    [0xff0066, 0x1a0010],   // magenta/bordeaux scuro
+    [0x556b2f, 0x0a0a00],   // verde oliva/nero
   ];
 
   triggerColorChange() {

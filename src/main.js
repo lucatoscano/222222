@@ -55,9 +55,9 @@ renderPass.clear = false;
 composer.addPass(renderPass);
 const bloomPass = new UnrealBloomPass(
   new THREE.Vector2(window.innerWidth, window.innerHeight),
-  0.5,  // intensità
-  0.4,   // raggio
-  0.8   // threshold
+  0.7,  // intensità
+  0.7,   // raggio
+  0.5   // threshold
 );
 composer.addPass(bloomPass);
 const finalPass = new ShaderPass(FinalPass);
@@ -72,8 +72,8 @@ const bokehPass = new BokehPass(scene, camera, {
 composer.addPass(bokehPass);
 
 document.body.innerHTML = `
-  <div class="status" aria-live="polite">Caricamento forme…</div>
-  <div class="hint">spazio · forma successiva</div>
+  <div class="status" aria-live="polite"></div>
+  <div class="hint"></div>
 `;
 document.body.prepend(renderer.domElement);
 
@@ -202,66 +202,36 @@ bokehPass.materialBokeh.uniforms.focus.value =
 
     if (phase === "rest" && phaseElapsed >= REST_DURATION) {
       startMorph();
-    } else if (phase === "morph") {
+    }  else if (phase === "morph") {
       const rawProgress = Math.min(phaseElapsed / MORPH_DURATION, 1);
       const p = easeInOutCubic(rawProgress);
-
       const morphEnergy = Math.sin(p * Math.PI);
 
-cloud.material.uniforms.uTurbulence.value =
-    THREE.MathUtils.lerp(
-        0.20,
-        1.10,
-        morphEnergy
-    );
-    cloud.material.uniforms.uPointSize.value = THREE.MathUtils.lerp(0.018, 0.012, morphEnergy);
+      cloud.material.uniforms.uTurbulence.value =
+        THREE.MathUtils.lerp(0.20, 1.10, morphEnergy);
 
-bloomPass.strength =
-    THREE.MathUtils.lerp(
-        0.05,
-        0.12,
-        morphEnergy
-    );
+      cloud.material.uniforms.uPointSize.value =
+        THREE.MathUtils.lerp(0.018, 0.012, morphEnergy);
 
-bloomPass.radius =
-    THREE.MathUtils.lerp(
-        0.35,
-        0.55,
-        morphEnergy
-    );
+      bloomPass.strength = THREE.MathUtils.lerp(0.05, 0.12, morphEnergy);
+      bloomPass.radius   = THREE.MathUtils.lerp(0.35, 0.55, morphEnergy);
 
-renderer.toneMappingExposure =
-    THREE.MathUtils.lerp(
-        1.05,
-        1.20,
-        morphEnergy
-    );
-
-cloud.update(p, elapsed);
-
-bloomPass.strength =
-    THREE.MathUtils.lerp(
-        0.05,
-        0.12,
-        morphEnergy
-    );
-
-bloomPass.radius =
-    THREE.MathUtils.lerp(
-        0.35,
-        0.65,
-        morphEnergy
-    );
+      renderer.toneMappingExposure =
+        THREE.MathUtils.lerp(0.65, 0.85, morphEnergy);
 
       cloud.update(p, elapsed);
 
       if (rawProgress >= 1) {
-        // FIX: al termine del morph sincronizziamo currentIndex.
-        // Non serve toccare i buffer qui: setMorph del prossimo ciclo
-        // li aggiornerà correttamente partendo da shapes[currentIndex].
         currentIndex = nextIndex;
         phase = "rest";
         phaseElapsed = 0;
+
+        // Reset esplicito ai valori di riposo — niente più stacco
+        // tra un morph e il successivo.
+        bloomPass.strength = 0.05;
+        bloomPass.radius = 0.35;
+        renderer.toneMappingExposure = 0.65;
+        cloud.material.uniforms.uPointSize.value = 0.018;
       }
     }
 

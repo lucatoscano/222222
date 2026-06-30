@@ -11,13 +11,14 @@ import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass.js";
 import FinalPass from "./FinalPass.js";
 import ParticleField from "./ParticleField.js";
 import BackgroundRenderer from "./BackgroundRenderer.js";
+import Recorder from "./Recorder.js";
 
 
 
 const PARTICLE_COUNT = 120000;
 const MORPH_DURATION = 2.8;
 const REST_DURATION = 3.5;
-const MAX_MODELS = 12;
+const MAX_MODELS = 20;
 
 const scene = new THREE.Scene();
 
@@ -26,10 +27,23 @@ const bgRenderer = new BackgroundRenderer();
 bgScene.add(bgRenderer.mesh);
 
 
+function getCanvasSize() {
+  const targetRatio = 4 / 5;
+  let height = window.innerHeight;
+  let width = height * targetRatio;
+
+  if (width > window.innerWidth) {
+    width = window.innerWidth;
+    height = width / targetRatio;
+  }
+
+  return { width, height };
+}
+const { width: initW, height: initH } = getCanvasSize();
 
 const camera = new THREE.PerspectiveCamera(
   60,
-  window.innerWidth / window.innerHeight,
+  initW / initH,
   0.1,
   100
 );
@@ -39,11 +53,18 @@ const renderer = new THREE.WebGLRenderer({
   antialias: true,
   powerPreference: "high-performance",
 });
+// Risoluzione di export per la registrazione (indipendente dalla finestra)
+const EXPORT_WIDTH = 2160;
+const EXPORT_HEIGHT = 2700;
+let isExportMode = false;
+let baseExposure = 0.65;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 0.65;
+renderer.toneMappingExposure = 0.95;
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setSize(initW, initH);
+
+
 
 const composer = new EffectComposer(renderer);
 
@@ -53,7 +74,7 @@ composer.addPass(bgRenderPass);
 const renderPass = new RenderPass(scene, camera);
 renderPass.clear = false;
 composer.addPass(renderPass);
-const bloomPass = new UnrealBloomPass(
+let bloomPass = new UnrealBloomPass(
   new THREE.Vector2(window.innerWidth, window.innerHeight),
   0.7,  // intensità
   0.7,   // raggio
@@ -70,6 +91,69 @@ document.body.innerHTML = `
   <div class="hint"></div>
 `;
 document.body.prepend(renderer.domElement);
+const recorder = new Recorder(renderer.domElement, 60);
+function rebuildBloomPass(width, height) {
+  const index = composer.passes.indexOf(bloomPass);
+
+  // Salva lo stato attuale prima di ricreare il pass
+  const prevStrength = bloomPass.strength;
+  const prevRadius = bloomPass.radius;
+  const prevThreshold = bloomPass.threshold;
+
+  composer.passes.splice(index, 1);
+
+  bloomPass = new UnrealBloomPass(
+    new THREE.Vector2(width, height),
+    prevStrength,
+    prevRadius,
+    prevThreshold
+  );
+
+  composer.passes.splice(index, 0, bloomPass);
+}
+
+function setExportResolution(enabled) {
+  isExportMode = enabled;
+
+  const w = enabled ? EXPORT_WIDTH : window.innerWidth;
+  const h = enabled ? EXPORT_HEIGHT : window.innerHeight;
+
+  renderer.setPixelRatio(1);
+  renderer.setSize(w, h);
+  composer.setSize(w, h);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  bgRenderer.resize();
+
+  rebuildBloomPass(w, h);
+
+  // Compensa la sottoesposizione del MediaRecorder durante captureStream
+  baseExposure = enabled ? 1.8 : 0.65;
+  renderer.toneMappingExposure = baseExposure;
+
+  if (enabled) {
+    renderer.domElement.style.width = "100vw";
+    renderer.domElement.style.height = "100vh";
+  } else {
+    renderer.domElement.style.width = "";
+    renderer.domElement.style.height = "";
+  }
+}
+
+window.addEventListener("keydown", (event) => {
+  if (event.code === "KeyR") {
+    event.preventDefault();
+
+    if (!recorder.isRecording) {
+      setExportResolution(true);
+      // Aspetta un frame perché il resize abbia effetto prima di iniziare a registrare
+      requestAnimationFrame(() => recorder.start());
+    } else {
+      recorder.stop();
+      setExportResolution(false);
+    }
+  }
+});
 
 const status = document.querySelector(".status");
 const controls = new OrbitControls(camera, renderer.domElement);
@@ -167,6 +251,7 @@ window.addEventListener("keydown", (event) => {
 });
 
 window.addEventListener("resize", () => {
+  if (isExportMode) return; // ignora il resize della finestra mentre esporti in 4K
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
@@ -206,11 +291,11 @@ function animate() {
       cloud.material.uniforms.uPointSize.value =
         THREE.MathUtils.lerp(0.018, 0.012, morphEnergy);
 
-      bloomPass.strength = THREE.MathUtils.lerp(0.7, 1.0, morphEnergy);
-      bloomPass.radius   = THREE.MathUtils.lerp(0.7, 0.9, morphEnergy);
+        bloomPass.strength = THREE.MathUtils.lerp(0.05, 0.12, morphEnergy);
+        bloomPass.radius   = THREE.MathUtils.lerp(0.35, 0.55, morphEnergy);
 
-      renderer.toneMappingExposure =
-        THREE.MathUtils.lerp(0.65, 0.85, morphEnergy);
+        renderer.toneMappingExposure =
+        THREE.MathUtils.lerp(baseExposure, baseExposure + 0.20, morphEnergy);
 
       cloud.update(p, elapsed);
 
@@ -221,9 +306,9 @@ function animate() {
 
         // Reset esplicito ai valori di riposo — niente più stacco
         // tra un morph e il successivo.
-        bloomPass.strength = 0.7;
-        bloomPass.radius = 0.7;
-        renderer.toneMappingExposure = 0.65;
+        bloomPass.strength = 0.05;
+bloomPass.radius = 0.35;
+renderer.toneMappingExposure = baseExposure;
         cloud.material.uniforms.uPointSize.value = 0.018;
       }
     }
@@ -269,6 +354,7 @@ function animate() {
   
   controls.update();
   composer.render();
+  
 
 }
 

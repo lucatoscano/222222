@@ -6,7 +6,6 @@ import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPa
 import { OrbitControls, OBJLoader } from "three-stdlib";
 import SurfaceSampler from "./SurfaceSampler.js";
 import ParticleCloud from "./ParticleCloud.js";
-import { BokehPass } from "three/examples/jsm/postprocessing/BokehPass.js";
 import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass.js";
 import FinalPass from "./FinalPass.js";
 import ParticleField from "./ParticleField.js";
@@ -18,7 +17,14 @@ const PARTICLE_COUNT = 120000;
 const MORPH_DURATION = 2.8;
 const REST_DURATION = 3.5;
 const MAX_MODELS = 12;
-
+const ACCENT_PALETTE = [
+  0xff3b30, // rosso acceso
+  0x3dffd0, // ciano neon
+  0xffd400, // giallo elettrico
+  0xff2e92, // magenta
+  0x7b5cff, // viola elettrico
+];
+let accentIndex = 0;
 const scene = new THREE.Scene();
 
 const bgScene = new THREE.Scene();
@@ -63,13 +69,7 @@ composer.addPass(bloomPass);
 const finalPass = new ShaderPass(FinalPass);
 
 composer.addPass(finalPass);
-const bokehPass = new BokehPass(scene, camera, {
-  focus: 4.0,
-  aperture: 0.000008,
-  maxblur: 0.0015
-});
 
-composer.addPass(bokehPass);
 
 document.body.innerHTML = `
   <div class="status" aria-live="polite"></div>
@@ -194,8 +194,7 @@ function animate() {
   
   const cameraDistance = camera.position.length();
 
-bokehPass.materialBokeh.uniforms.focus.value =
-    cameraDistance * 0.95;
+
 
   if (cloud) {
     phaseElapsed += dt;

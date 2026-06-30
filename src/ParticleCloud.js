@@ -131,6 +131,8 @@ varying float vAlpha;
 
 varying float vDepth;
 varying float vLight;
+uniform vec3 uAccentColor;
+
 
 void main(){
 
@@ -150,11 +152,8 @@ void main(){
         d
     );
 
-    vec3 nearColor = vec3(
-        1.00,
-        1.00,
-        1.00
-    );
+    vec3 nearColor = uAccentColor;
+
 
     vec3 farColor = vec3(
         0.82,
@@ -212,10 +211,11 @@ export default class ParticleCloud {
 
         this.material = new THREE.ShaderMaterial({
             uniforms: {
-                uProgress:   { value: 0 },
-                uTime:       { value: 0 },
-                uTurbulence: { value: 1.0 },
-                uPointSize:  { value: 0.018 }
+                uProgress:    { value: 0 },
+                uTime:        { value: 0 },
+                uTurbulence:  { value: 1.0 },
+                uPointSize:   { value: 0.018 },
+                uAccentColor: { value: new THREE.Color(0xff3b30) }
             },
             vertexShader,
             fragmentShader,

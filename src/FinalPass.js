@@ -142,8 +142,8 @@ vec2 offset =
             vec3 color = vec3(r,g,b);
 
             // Contrasto morbido
-            color = pow(color, vec3(0.7));
-            color = clamp(color * 1.4, 0.0, 1.0);
+color = pow(color, vec3(0.7));
+color = clamp(color * 1.4, 0.0, 1.0);
 
 // Leggero S-Curve
 color = smoothstep(0.0, 1.0, color);

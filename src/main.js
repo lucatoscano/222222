@@ -20,7 +20,8 @@ const REST_DURATION = 3.5;
 const MAX_MODELS = 12;
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x090909);
+scene.background = new THREE.Color(0x0a0aff);
+
 
 const camera = new THREE.PerspectiveCamera(
   60,
@@ -36,7 +37,7 @@ const renderer = new THREE.WebGLRenderer({
 });
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 0.7;
+renderer.toneMappingExposure = 0.55;
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
 
@@ -46,9 +47,9 @@ composer.addPass(renderPass);
 
 const bloomPass = new UnrealBloomPass(
   new THREE.Vector2(window.innerWidth, window.innerHeight),
-  0.15,  // intensità
-  0.3,  // raggio
-  0.85   // threshold
+  0.08,  // intensità
+  0.2,   // raggio
+  0.95   // threshold
 );
 composer.addPass(bloomPass);
 const finalPass = new ShaderPass(FinalPass);
@@ -77,6 +78,76 @@ const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.enablePan = false;
 
+// Gruppo silhouette — mesh piatte colorate sullo sfondo
+const silhouetteGroup = new THREE.Group();
+scene.add(silhouetteGroup);
+
+const silhouetteMat = new THREE.MeshBasicMaterial({
+  color: 0xcc2200,
+  side: THREE.DoubleSide,
+  depthWrite: false,
+  depthTest: false,
+});
+
+let silhouetteMesh = null;
+
+// Palette colori risograph — coppie [sfondo, silhouette]
+const PALETTES = [
+  [0x0a0aff, 0xcc2200],   // blu + rosso
+  [0xcc2200, 0x0a0aff],   // rosso + blu
+  [0xcc2200, 0xf0e0b0],   // rosso + beige
+  [0x0a1a00, 0xf0e0b0],   // verde scuro + beige
+  [0x111111, 0x0a0aff],   // nero + blu
+  [0x111111, 0xcc2200],   // nero + rosso
+];
+let paletteIndex = 0;
+
+function updateSilhouette(index) {
+  if (silhouetteMesh) {
+    silhouetteGroup.remove(silhouetteMesh);
+    silhouetteMesh.geometry.dispose();
+    silhouetteMesh = null;
+  }
+
+  // Cambia palette ad ogni morph
+  paletteIndex = (paletteIndex + 1) % PALETTES.length;
+  const [bgColor, fgColor] = PALETTES[paletteIndex];
+  scene.background = new THREE.Color(bgColor);
+  silhouetteMat.color.set(fgColor);
+
+  const loader = new OBJLoader();
+  fetch(`/models/${(index % 3) + 1}.obj`)
+    .then(r => r.text())
+    .then(src => {
+      const obj = loader.parse(src);
+      obj.traverse(child => {
+        if (child.isMesh && !silhouetteMesh) {
+          silhouetteMesh = new THREE.Mesh(child.geometry, silhouetteMat);
+          silhouetteMesh.renderOrder = -1;
+
+          // Centra e scala per riempire lo schermo
+          child.geometry.computeBoundingBox();
+          const box = child.geometry.boundingBox;
+          const size = new THREE.Vector3();
+          box.getSize(size);
+          const maxDim = Math.max(size.x, size.y, size.z);
+          const targetSize = 5.5;
+          silhouetteMesh.scale.setScalar(targetSize / maxDim);
+
+          // Centra la geometria
+          const center = new THREE.Vector3();
+          box.getCenter(center);
+          silhouetteMesh.position.set(
+            -center.x * (targetSize / maxDim),
+            -center.y * (targetSize / maxDim),
+            -8
+          );
+
+          silhouetteGroup.add(silhouetteMesh);
+        }
+      });
+    });
+}
 const group = new THREE.Group();
 scene.add(group);
 const field = new ParticleField();
@@ -140,6 +211,7 @@ function startMorph() {
   cloud.setMorph(shapes[currentIndex], shapes[nextIndex]);
 
   phase = "morph";
+  updateSilhouette(nextIndex);
   phaseElapsed = 0;
 }
 
@@ -260,6 +332,7 @@ bloomPass.radius =
     rotationSpeed = THREE.MathUtils.lerp(rotationSpeed, targetSpeed, 0.04);
 
     group.rotation.y += rotationSpeed * dt;
+   
     group.rotation.x = Math.sin(elapsed * 0.8) * 0.5;
     group.rotation.z = Math.cos(elapsed * 0.8) * 0.5;
   }

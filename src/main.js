@@ -122,26 +122,44 @@ function updateSilhouette(index) {
       const obj = loader.parse(src);
       obj.traverse(child => {
         if (child.isMesh && !silhouetteMesh) {
-          silhouetteMesh = new THREE.Mesh(child.geometry, silhouetteMat);
+          // Clona e distorci la geometria
+          const geo = child.geometry.clone();
+          const pos = geo.attributes.position;
+          for (let i = 0; i < pos.count; i++) {
+            const x = pos.getX(i);
+            const y = pos.getY(i);
+            const z = pos.getZ(i);
+            // Distorsione random forte
+            pos.setXYZ(i,
+              x + (Math.random() - 0.5) * 0.3,
+              y + (Math.random() - 0.5) * 0.3,
+              z + (Math.random() - 0.5) * 0.1
+            );
+          }
+          pos.needsUpdate = true;
+
+          silhouetteMesh = new THREE.Mesh(geo, silhouetteMat);
           silhouetteMesh.renderOrder = -1;
 
-          // Centra e scala per riempire lo schermo
-          child.geometry.computeBoundingBox();
-          const box = child.geometry.boundingBox;
+          geo.computeBoundingBox();
+          const box = geo.boundingBox;
           const size = new THREE.Vector3();
           box.getSize(size);
           const maxDim = Math.max(size.x, size.y, size.z);
-          const targetSize = 5.5;
-          silhouetteMesh.scale.setScalar(targetSize / maxDim);
+          const targetSize = 6.0;
+          const scale = targetSize / maxDim;
+          silhouetteMesh.scale.setScalar(scale);
 
-          // Centra la geometria
           const center = new THREE.Vector3();
           box.getCenter(center);
           silhouetteMesh.position.set(
-            -center.x * (targetSize / maxDim),
-            -center.y * (targetSize / maxDim),
+            -center.x * scale,
+            -center.y * scale,
             -8
           );
+
+          // Orientamento fisso — frontale, niente rotazione
+          silhouetteMesh.rotation.set(0, 0, 0);
 
           silhouetteGroup.add(silhouetteMesh);
         }

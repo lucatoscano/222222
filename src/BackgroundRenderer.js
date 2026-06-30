@@ -52,10 +52,15 @@ const frag = `
     vec3 colB = mix(uColorBPrev, uColorB, smoothstep(0.0, 1.0, uTransition));
 
     /* rumore organico lento che modula il mix tra i due colori */
-    float n = noise(uv * 3.0 + uTime * 0.05);
-    float n2 = noise(uv * 7.0 - uTime * 0.03);
-    float blend = mix(n, n2, 0.5);
-    vec3 base = mix(colA, colB, smoothstep(0.3, 0.7, blend));
+    vec2 flow1 = vec2(uTime * 0.18, uTime * 0.12);
+    vec2 flow2 = vec2(-uTime * 0.15, uTime * 0.21);
+
+float n1 = noise(uv * 2.0 + flow1);
+float n2 = noise(uv * 4.0 + flow2 + n1 * 0.8);
+float n3 = noise(uv * 1.0 - flow1 * 0.5 + n2 * 0.3);
+
+float blend = clamp(n1 * 0.4 + n2 * 0.35 + n3 * 0.25, 0.0, 1.0);
+vec3 base = mix(colA, colB, smoothstep(0.2, 0.8, blend));
 
     /* dithering Bayer fitto */
     float dith = bayer8(px);

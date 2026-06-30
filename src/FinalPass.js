@@ -12,7 +12,7 @@ const FinalPass = {
 
         grainStrength: { value: 0.025 },
 
-        chroma: { value: 0.0008 },
+        chroma: { value: 0.0000 },
         posterize:  { value: 5.0 },
         ditherStr:  { value: 0.8 }
 

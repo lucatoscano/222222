@@ -64,13 +64,9 @@ const finalPass = new ShaderPass(FinalPass);
 
 composer.addPass(finalPass);
 const bokehPass = new BokehPass(scene, camera, {
-
   focus: 4.0,
-
-  aperture: 0.00002,
-
-  maxblur: 0.004
-
+  aperture: 0.000008,
+  maxblur: 0.0015
 });
 
 composer.addPass(bokehPass);
@@ -85,19 +81,6 @@ const status = document.querySelector(".status");
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.enablePan = false;
-
-// Gruppo silhouette — mesh piatte colorate sullo sfondo
-const silhouetteGroup = new THREE.Group();
-scene.add(silhouetteGroup);
-
-const silhouetteMat = new THREE.MeshBasicMaterial({
-  color: 0xcc2200,
-  side: THREE.DoubleSide,
-  depthWrite: false,
-  depthTest: false,
-});
-
-let silhouetteMesh = null;
 
 const group = new THREE.Group();
 scene.add(group);
@@ -231,11 +214,12 @@ cloud.material.uniforms.uTurbulence.value =
         1.10,
         morphEnergy
     );
+    cloud.material.uniforms.uPointSize.value = THREE.MathUtils.lerp(0.018, 0.012, morphEnergy);
 
 bloomPass.strength =
     THREE.MathUtils.lerp(
-        0.18,
-        0.42,
+        0.05,
+        0.12,
         morphEnergy
     );
 
@@ -257,8 +241,8 @@ cloud.update(p, elapsed);
 
 bloomPass.strength =
     THREE.MathUtils.lerp(
-        0.18,
-        0.55,
+        0.05,
+        0.12,
         morphEnergy
     );
 

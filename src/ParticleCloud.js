@@ -143,12 +143,12 @@ void main(){
     if(d > 0.5) discard;
 
     float alpha =
-        1.0 -
-        smoothstep(
-            0.30,
-            0.50,
-            d
-        );
+    1.0 -
+    smoothstep(
+        0.20,
+        0.50,
+        d
+    );
 
     vec3 nearColor = vec3(
         1.00,
@@ -177,11 +177,13 @@ color =
     );
 
     alpha *=
-        mix(
-            1.0,
-            0.75,
-            vDepth
-        );
+    mix(
+        1.0,
+        0.55,
+        vDepth
+    );
+
+alpha *= 0.7;
 
     gl_FragColor =
         vec4(

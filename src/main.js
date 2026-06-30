@@ -20,9 +20,11 @@ const REST_DURATION = 3.5;
 const MAX_MODELS = 12;
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x090909);
+
+const bgScene = new THREE.Scene();
 const bgRenderer = new BackgroundRenderer();
-scene.add(bgRenderer.mesh);
+bgRenderer.mesh.layers.set(1);
+bgScene.add(bgRenderer.mesh);
 
 
 
@@ -47,8 +49,6 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 const composer = new EffectComposer(renderer);
 const renderPass = new RenderPass(scene, camera);
 composer.addPass(renderPass);
-// Composer separato per il background — NIENTE bloom qui
-const bgScene = new THREE.Scene();
 
 const bloomPass = new UnrealBloomPass(
   new THREE.Vector2(window.innerWidth, window.innerHeight),
@@ -319,12 +319,17 @@ bloomPass.radius =
   
   controls.update();
 
+  // 1. Sfondo: render diretto, pulisce normalmente
   renderer.autoClear = true;
-  renderer.render(bgScene, camera);   // sfondo netto, senza bloom
+  renderer.setRenderTarget(null);
+  renderer.render(bgScene, camera);
 
-  renderer.autoClear = false;
-  composer.render();                  // particelle + bloom + finalPass sopra
-  renderer.autoClear = true;
+  // 2. Particelle + bloom + finalPass: il composer scrive SOPRA senza pulire
+  const prevClearColor = renderPass.clear;
+  renderPass.clear = false;
+  composer.render();
+  renderPass.clear = prevClearColor;
+
 }
 
 init();

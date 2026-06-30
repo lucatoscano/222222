@@ -76,7 +76,7 @@ export default class BackgroundRenderer {
 
     this.mesh = new THREE.Mesh(geometry, this.material);
     this.mesh.renderOrder = -999;
-    this.mesh.position.z = -15;
+    this.mesh.position.z = -5;
     this.mesh.frustumCulled = false;
   }
 
@@ -84,7 +84,7 @@ export default class BackgroundRenderer {
     this.material.uniforms.uTime.value = elapsed;
     this.mesh.quaternion.copy(camera.quaternion);
     this.mesh.position.copy(camera.position);
-    this.mesh.translateZ(-15);
+    this.mesh.translateZ(-5);
   }
 
   triggerGridChange() {

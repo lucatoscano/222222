@@ -11,7 +11,7 @@ import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass.js";
 import FinalPass from "./FinalPass.js";
 import ParticleField from "./ParticleField.js";
 import BackgroundRenderer from "./BackgroundRenderer.js";
-import Recorder from "./Recorder.js";
+import OfflineRenderer from "./OfflineRenderer.js";
 
 
 
@@ -53,6 +53,16 @@ const renderer = new THREE.WebGLRenderer({
   antialias: true,
   powerPreference: "high-performance",
 });
+const offline = new OfflineRenderer(renderer);
+window.addEventListener("keydown", (e) => {
+
+  if (e.code === "KeyP") {
+
+      offline.start(10);
+
+  }
+
+});
 // Risoluzione di export per la registrazione (indipendente dalla finestra)
 const EXPORT_WIDTH = 2160;
 const EXPORT_HEIGHT = 2700;
@@ -77,8 +87,8 @@ composer.addPass(renderPass);
 let bloomPass = new UnrealBloomPass(
   new THREE.Vector2(window.innerWidth, window.innerHeight),
   0.7,  // intensità
-  0.7,   // raggio
-  0.5   // threshold
+  0.5,   // raggio
+  0.50   // threshold
 );
 composer.addPass(bloomPass);
 const finalPass = new ShaderPass(FinalPass);
@@ -91,7 +101,6 @@ document.body.innerHTML = `
   <div class="hint"></div>
 `;
 document.body.prepend(renderer.domElement);
-const recorder = new Recorder(renderer.domElement, 60);
 function rebuildBloomPass(width, height) {
   const index = composer.passes.indexOf(bloomPass);
 
@@ -376,6 +385,7 @@ bloomPass.strength = 1.0;
 bloomPass.radius = 0.6;
   controls.update();
   composer.render();
+  offline.saveFrame();
   
 
 }

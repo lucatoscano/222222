@@ -10,7 +10,7 @@ const FinalPass = {
 
         vignetteStrength: { value: 0.28 },
 
-        grainStrength: { value: 0.025 },
+        grainStrength: { value: 0.008 },
 
         chroma: { value: 0.0000 },
         posterize:  { value: 5.0 },
@@ -163,7 +163,7 @@ color.r += color.r * 0.015;
             // Dithering Bayer
             vec2 pixelCoord = vUv * vec2(1280.0, 720.0);
             float threshold = bayer4(pixelCoord) * ditherStr;
-            color += (threshold - 0.5) * 0.12;
+            color += (threshold - 0.5) * 0.045;
 
             // Posterize
 color = posterizeColor(color, posterize);

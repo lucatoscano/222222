@@ -72,11 +72,11 @@ vec3 base = mix(colA, colB, smoothstep(0.38, 0.55, blend));
     float speckle = step(dith, grain * 0.85 + 0.15);
 
     vec3 col = base;
-col += (speckle - 0.5) * 0.22;
-col -= (1.0 - speckle) * 0.16;
+    col += (speckle - 0.5) * 0.09;
+    col -= (1.0 - speckle) * 0.06;
 
 float microGrain = hash(px * 1.7 + uTime * 11.0) - 0.5;
-col += microGrain * 0.05;
+col += microGrain * 0.015;
 
 /* contrasto extra: scurisce ulteriormente le zone già scure,
    così le macchie nere restano leggibili anche con palette scure */

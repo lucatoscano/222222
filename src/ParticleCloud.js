@@ -152,12 +152,15 @@ void main(){
         d
     );
 
-    vec3 nearColor = uAccentColor;
-
-
+    vec3 nearColor = vec3(
+        1.00,
+        1.00,
+        1.00
+    );
+    
     vec3 farColor = vec3(
-        0.82,
-        0.88,
+        0.78,
+        0.86,
         1.00
     );
 

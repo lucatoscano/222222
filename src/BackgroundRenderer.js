@@ -60,7 +60,7 @@ float n2 = noise(uv * 4.0 + flow2 + n1 * 0.8);
 float n3 = noise(uv * 1.0 - flow1 * 0.5 + n2 * 0.3);
 
 float blend = clamp(n1 * 0.4 + n2 * 0.35 + n3 * 0.25, 0.0, 1.0);
-vec3 base = mix(colA, colB, smoothstep(0.2, 0.8, blend));
+vec3 base = mix(colA, colB, smoothstep(0.38, 0.55, blend));
 
     /* dithering Bayer fitto */
     float dith = bayer8(px);
@@ -72,66 +72,72 @@ vec3 base = mix(colA, colB, smoothstep(0.2, 0.8, blend));
     float speckle = step(dith, grain * 0.85 + 0.15);
 
     vec3 col = base;
-    col += (speckle - 0.5) * 0.18;     // contrasto puntinato più marcato
-    col -= (1.0 - speckle) * 0.05;
+col += (speckle - 0.5) * 0.22;
+col -= (1.0 - speckle) * 0.16;
 
-    /* ulteriore grana fine indipendente, per texture "carta stampata" */
-    float microGrain = hash(px * 1.7 + uTime * 11.0) - 0.5;
-    col += microGrain * 0.04;
+float microGrain = hash(px * 1.7 + uTime * 11.0) - 0.5;
+col += microGrain * 0.05;
+
+/* contrasto extra: scurisce ulteriormente le zone già scure,
+   così le macchie nere restano leggibili anche con palette scure */
+col = pow(clamp(col, 0.0, 1.0), vec3(1.35));
 
     gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
   }
 `;
 
 export default class BackgroundRenderer {
-  constructor() {
-    const geometry = new THREE.PlaneGeometry(2, 2);
-    this.material = new THREE.ShaderMaterial({
-        uniforms: {
-            uTime: { value: 0 },
-            uResolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
-            uColorA: { value: new THREE.Color(0xcc2200) },
-            uColorB: { value: new THREE.Color(0x000000) },
-            uColorAPrev: { value: new THREE.Color(0xcc2200) },
-            uColorBPrev: { value: new THREE.Color(0x000000) },
-            uTransition: { value: 1.0 }
-          },
-      vertexShader: vert,
-      fragmentShader: frag,
-      depthWrite: false,
-      depthTest: false,
-    });
-
-    this.mesh = new THREE.Mesh(geometry, this.material);
-    this.mesh.renderOrder = -999;
-    this.mesh.frustumCulled = false;
-  }
+    constructor() {
+        const geometry = new THREE.PlaneGeometry(2, 2);
+    
+        const [initA, initB] = BackgroundRenderer.PALETTES[0];
+    
+        this.material = new THREE.ShaderMaterial({
+            uniforms: {
+                uTime: { value: 0 },
+                uResolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
+                uColorA: { value: new THREE.Color(initA) },
+                uColorB: { value: new THREE.Color(initB) },
+                uColorAPrev: { value: new THREE.Color(initA) },
+                uColorBPrev: { value: new THREE.Color(initB) },
+                uTransition: { value: 1.0 }
+              },
+          vertexShader: vert,
+          fragmentShader: frag,
+          depthWrite: false,
+          depthTest: false,
+        });
+    
+        this.mesh = new THREE.Mesh(geometry, this.material);
+        this.mesh.renderOrder = -999;
+        this.mesh.frustumCulled = false;
+    }
 
   update(elapsed) {
     this.material.uniforms.uTime.value = elapsed;
   
     if (this._transitionStart !== undefined) {
-      const dur = 1800; // ms, durata della transizione colore
+      const dur = 1600; // ms, durata della transizione colore
       const t = Math.min((performance.now() - this._transitionStart) / dur, 1.0);
       this.material.uniforms.uTransition.value = t;
     }
   }
 
- // Palette ispirate alle reference: [sfondo, dettaglio]
- static PALETTES = [
-    [0xcc2200, 0x000000],   // rosso/nero
-    [0x0a0aff, 0x000000],   // blu/nero
-    [0xcc2200, 0x3a0a00],   // rosso/rosso scuro
-    [0x0a0aff, 0x000033],   // blu/blu scuro
-    [0xcc6600, 0x000000],   // arancio/nero
-    [0x00aa55, 0x000000],   // verde smeraldo/nero
-    [0xaa00cc, 0x000000],   // viola/nero
-    [0xffcc00, 0x1a0a00],   // oro/marrone scuro
-    [0x00cccc, 0x001a1a],   // ciano/petrolio
-    [0xff0066, 0x1a0010],   // magenta/bordeaux scuro
-    [0x556b2f, 0x0a0a00],   // verde oliva/nero
+// Palette coerente: stessa saturazione/luminosità di base,
+// ordinata sulla ruota cromatica così ogni transizione passa
+// al colore "vicino" invece di saltare da un capo all'altro.
+static PALETTES = [
+    [0x661100, 0x000000],   // rosso
+    [0x662b00, 0x000000],   // arancio
+    [0x665500, 0x000000],   // ambra
+    [0x3b5500, 0x000000],   // verde-lime
+    [0x00552b, 0x000000],   // verde smeraldo
+    [0x005555, 0x000000],   // ciano
+    [0x003366, 0x000000],   // blu
+    [0x2b0066, 0x000000],   // indaco
+    [0x550066, 0x000000],   // viola
+    [0x660033, 0x000000],   // magenta
   ];
-
   triggerColorChange() {
     this._paletteIndex = ((this._paletteIndex ?? 0) + 1) % BackgroundRenderer.PALETTES.length;
     const [a, b] = BackgroundRenderer.PALETTES[this._paletteIndex];

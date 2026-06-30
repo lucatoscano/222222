@@ -372,6 +372,8 @@ if (phase === "morph") {
   
   );
   
+bloomPass.strength = 1.0;
+bloomPass.radius = 0.6;
   controls.update();
   composer.render();
   

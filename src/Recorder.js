@@ -1,5 +1,5 @@
 export default class Recorder {
-  constructor(canvas, fps = 60) {
+  constructor(canvas, fps = 120) {
     this.canvas = canvas;
     this.fps = fps;
     this.recorder = null;

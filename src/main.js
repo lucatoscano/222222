@@ -20,7 +20,8 @@ const REST_DURATION = 3.5;
 const MAX_MODELS = 12;
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x0a0aff);
+scene.background = new THREE.Color(0x090909);
+
 
 
 const camera = new THREE.PerspectiveCamera(
@@ -37,7 +38,7 @@ const renderer = new THREE.WebGLRenderer({
 });
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 0.55;
+renderer.toneMappingExposure = 1.55;
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
 
@@ -47,9 +48,9 @@ composer.addPass(renderPass);
 
 const bloomPass = new UnrealBloomPass(
   new THREE.Vector2(window.innerWidth, window.innerHeight),
-  0.08,  // intensità
-  0.2,   // raggio
-  0.95   // threshold
+  0.15,  // intensità
+  0.35,   // raggio
+  0.65   // threshold
 );
 composer.addPass(bloomPass);
 const finalPass = new ShaderPass(FinalPass);
@@ -91,86 +92,8 @@ const silhouetteMat = new THREE.MeshBasicMaterial({
 
 let silhouetteMesh = null;
 
-// Palette colori risograph — coppie [sfondo, silhouette]
-const PALETTES = [
-  [0x0a0aff, 0xcc2200],   // blu + rosso
-  [0xcc2200, 0x0a0aff],   // rosso + blu
-  [0xcc2200, 0xf0e0b0],   // rosso + beige
-  [0x0a1a00, 0xf0e0b0],   // verde scuro + beige
-  [0x111111, 0x0a0aff],   // nero + blu
-  [0x111111, 0xcc2200],   // nero + rosso
-];
-let paletteIndex = 0;
-
-function updateSilhouette(index) {
-  if (silhouetteMesh) {
-    silhouetteGroup.remove(silhouetteMesh);
-    silhouetteMesh.geometry.dispose();
-    silhouetteMesh = null;
-  }
-
-  // Cambia palette ad ogni morph
-  paletteIndex = (paletteIndex + 1) % PALETTES.length;
-  const [bgColor, fgColor] = PALETTES[paletteIndex];
-  scene.background = new THREE.Color(bgColor);
-  silhouetteMat.color.set(fgColor);
-
-  const loader = new OBJLoader();
-  fetch(`/models/${(index % 3) + 1}.obj`)
-    .then(r => r.text())
-    .then(src => {
-      const obj = loader.parse(src);
-      obj.traverse(child => {
-        if (child.isMesh && !silhouetteMesh) {
-          // Clona e distorci la geometria
-          const geo = child.geometry.clone();
-          const pos = geo.attributes.position;
-          for (let i = 0; i < pos.count; i++) {
-            const x = pos.getX(i);
-            const y = pos.getY(i);
-            const z = pos.getZ(i);
-            // Distorsione random forte
-            pos.setXYZ(i,
-              x + (Math.random() - 0.5) * 0.3,
-              y + (Math.random() - 0.5) * 0.3,
-              z + (Math.random() - 0.5) * 0.1
-            );
-          }
-          pos.needsUpdate = true;
-
-          silhouetteMesh = new THREE.Mesh(geo, silhouetteMat);
-          silhouetteMesh.renderOrder = -1;
-
-          geo.computeBoundingBox();
-          const box = geo.boundingBox;
-          const size = new THREE.Vector3();
-          box.getSize(size);
-          const maxDim = Math.max(size.x, size.y, size.z);
-          const targetSize = 6.0;
-          const scale = targetSize / maxDim;
-          silhouetteMesh.scale.setScalar(scale);
-
-          const center = new THREE.Vector3();
-          box.getCenter(center);
-          silhouetteMesh.position.set(
-            -center.x * scale,
-            -center.y * scale,
-            -8
-          );
-
-          // Orientamento fisso — frontale, niente rotazione
-          silhouetteMesh.rotation.set(0, 0, 0);
-
-          silhouetteGroup.add(silhouetteMesh);
-        }
-      });
-    });
-}
 const group = new THREE.Group();
 scene.add(group);
-const field = new ParticleField();
-
-scene.add(field.points);
 const target = new THREE.Vector3();
 
 const shapes = [];
@@ -229,7 +152,7 @@ function startMorph() {
   cloud.setMorph(shapes[currentIndex], shapes[nextIndex]);
 
   phase = "morph";
-  updateSilhouette(nextIndex);
+
   phaseElapsed = 0;
 }
 

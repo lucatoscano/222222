@@ -40,7 +40,7 @@ const renderer = new THREE.WebGLRenderer({
 });
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.55;
+renderer.toneMappingExposure = 0.85;
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
 
@@ -52,9 +52,9 @@ const bgScene = new THREE.Scene();
 
 const bloomPass = new UnrealBloomPass(
   new THREE.Vector2(window.innerWidth, window.innerHeight),
-  0.15,  // intensità
-  0.35,   // raggio
-  0.65   // threshold
+  0.06,  // intensità
+  0.2,   // raggio
+  0.9   // threshold
 );
 composer.addPass(bloomPass);
 const finalPass = new ShaderPass(FinalPass);
@@ -145,6 +145,7 @@ async function loadAllModels() {
 }
 
 function startMorph() {
+  bgRenderer.triggerGridChange();
   if (!cloud || phase === "morph") return;
 
   nextIndex = (currentIndex + 1) % shapes.length;

@@ -11,11 +11,11 @@ const vert = `
 const frag = `
   uniform float uTime;
   uniform vec2  uResolution;
+  uniform float uGridSeed;
   varying vec2 vUv;
 
   float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }
 
-  // Matrice Bayer 4x4 — stessa del FinalPass, per coerenza visiva
   float bayer4(vec2 p) {
     int x = int(mod(p.x, 4.0));
     int y = int(mod(p.y, 4.0));
@@ -32,49 +32,28 @@ const frag = `
     vec2 uv = vUv;
     vec2 px = uv * uResolution;
 
-    /* --- griglia di colonne verticali --- */
-    float colCount = 48.0;
-    float colId = floor(uv.x * colCount);
+    float cellX = 14.0;
+    float cellY = 10.0;
+    vec2 cellId = floor(uv * vec2(cellX, cellY));
+    vec2 cellUv = fract(uv * vec2(cellX, cellY));
 
-    /* --- glitch lento: ogni colonna ha un timeslot che cambia ogni N secondi --- */
-    float slowTime = floor(uTime * 0.35);          // cambia ogni ~2.8s
-    float colSeed  = hash(vec2(colId, slowTime));
+    float slowTime = floor(uTime * 0.25);
+    float cellSeed = hash(cellId + slowTime * 0.3 + uGridSeed);
 
-    /* shift orizzontale a scatti, solo su alcune colonne */
-    float doShift = step(0.82, colSeed);
-    float shiftAmt = (hash(vec2(colId, slowTime + 7.7)) - 0.5) * 0.06 * doShift;
-    vec2 uvG = uv + vec2(shiftAmt, 0.0);
+    float notchX = step(0.6, hash(cellId + vec2(11.0, 3.0) + uGridSeed));
+    float notchSize = 0.35 + hash(cellId + vec2(5.0, 9.0) + uGridSeed) * 0.25;
+    float notch = step(notchSize, cellUv.x);
+    float cellShape = mix(1.0, notch, notchX);
 
-    float colIdG = floor(uvG.x * colCount);
+    float band = smoothstep(0.45, 0.55, cellSeed) * cellShape;
 
-    /* --- pattern righe orizzontali dentro ogni colonna --- */
-    float rowCount = 90.0;
-    float rowId = floor(uv.y * rowCount);
-    float rowSeed = hash(vec2(colIdG, floor(rowId * 0.3) + slowTime * 0.5));
-
-    /* bande on/off tipo barcode, leggermente animate */
-    /* righe nette, animate verticalmente in loop lento */
-float scrollY = uv.y + uTime * 0.02;
-float rowPattern = mod(floor(scrollY * rowCount) + floor(colIdG * 1.3), 4.0);
-float band = step(2.0, rowPattern);
-
-    /* --- colori --- */
-    vec3 colA = vec3(0.04, 0.04, 0.05);   // quasi nero
-    vec3 colB = vec3(0.85, 0.78, 0.05);   // giallo desaturato
+    vec3 colA = vec3(0.0, 0.0, 0.0);
+    vec3 colB = vec3(0.45, 0.40, 0.0);
     vec3 col  = mix(colA, colB, band);
 
-    /* occasionali colonne intere "rotte" (glitch forte) */
-    float bigGlitch = step(0.965, hash(vec2(floor(slowTime), colIdG)));
-    col = mix(col, vec3(1.0), bigGlitch * step(0.5, hash(vec2(colIdG, uTime))));
-
-    /* --- dithering Bayer + posterize, stesso stile del FinalPass --- */
     float dith = bayer4(px) * 0.6;
     col += (dith - 0.5) * 0.05;
     col = floor(col * 5.0 + 0.5) / 5.0;
-
-    /* leggera vignetta per non competere con le particelle al centro */
-    float d = length(uv - 0.5);
-    col *= mix(1.0, 0.55, smoothstep(0.3, 0.9, d));
 
     gl_FragColor = vec4(col, 1.0);
   }
@@ -82,12 +61,12 @@ float band = step(2.0, rowPattern);
 
 export default class BackgroundRenderer {
   constructor() {
-    // Piano enorme, molto lontano, dietro tutto il resto
     const geometry = new THREE.PlaneGeometry(120, 120);
     this.material = new THREE.ShaderMaterial({
       uniforms: {
         uTime: { value: 0 },
-        uResolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) }
+        uResolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
+        uGridSeed: { value: 0 }
       },
       vertexShader: vert,
       fragmentShader: frag,
@@ -103,11 +82,13 @@ export default class BackgroundRenderer {
 
   update(elapsed, camera) {
     this.material.uniforms.uTime.value = elapsed;
-
-    // Mantiene il quad sempre frontale alla camera, indipendentemente dall'orbit
     this.mesh.quaternion.copy(camera.quaternion);
     this.mesh.position.copy(camera.position);
     this.mesh.translateZ(-15);
+  }
+
+  triggerGridChange() {
+    this.material.uniforms.uGridSeed.value += 17.37;
   }
 
   resize() {

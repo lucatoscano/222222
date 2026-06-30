@@ -166,11 +166,10 @@ color.r += color.r * 0.015;
             color += (threshold - 0.5) * 0.12;
 
             // Posterize
-            color = posterizeColor(color, posterize);
+color = posterizeColor(color, posterize);
 
-            gl_FragColor =
-
-                vec4(color,1.0);
+gl_FragColor =
+    vec4(color,1.0);
 
         }
 

@@ -148,7 +148,7 @@ async function loadAllModels() {
 }
 
 function startMorph() {
-  bgRenderer.triggerGridChange();
+  bgRenderer.triggerColorChange();
   if (!cloud || phase === "morph") return;
 
   nextIndex = (currentIndex + 1) % shapes.length;

@@ -288,14 +288,34 @@ function animate() {
       cloud.material.uniforms.uTurbulence.value =
         THREE.MathUtils.lerp(0.20, 1.10, morphEnergy);
 
-      cloud.material.uniforms.uPointSize.value =
-        THREE.MathUtils.lerp(0.018, 0.012, morphEnergy);
+        cloud.material.uniforms.uPointSize.value =
+        THREE.MathUtils.lerp(
+            cloud.material.uniforms.uPointSize.value,
+            THREE.MathUtils.lerp(
+                0.018,
+                0.012,
+                morphEnergy
+            ),
+            0.08
+        );
 
-        bloomPass.strength = THREE.MathUtils.lerp(0.05, 0.12, morphEnergy);
-        bloomPass.radius   = THREE.MathUtils.lerp(0.35, 0.55, morphEnergy);
-
-        renderer.toneMappingExposure =
-        THREE.MathUtils.lerp(baseExposure, baseExposure + 0.20, morphEnergy);
+        bloomPass.strength = THREE.MathUtils.lerp(
+          bloomPass.strength,
+          THREE.MathUtils.lerp(0.05, 0.12, morphEnergy),
+          0.08
+      );
+      
+      bloomPass.radius = THREE.MathUtils.lerp(
+          bloomPass.radius,
+          THREE.MathUtils.lerp(0.35, 0.55, morphEnergy),
+          0.08
+      );
+      
+      renderer.toneMappingExposure = THREE.MathUtils.lerp(
+          renderer.toneMappingExposure,
+          THREE.MathUtils.lerp(baseExposure, baseExposure + 0.20, morphEnergy),
+          0.08
+      );
 
       cloud.update(p, elapsed);
 
@@ -303,13 +323,6 @@ function animate() {
         currentIndex = nextIndex;
         phase = "rest";
         phaseElapsed = 0;
-
-        // Reset esplicito ai valori di riposo — niente più stacco
-        // tra un morph e il successivo.
-        bloomPass.strength = 0.05;
-bloomPass.radius = 0.35;
-renderer.toneMappingExposure = baseExposure;
-        cloud.material.uniforms.uPointSize.value = 0.018;
       }
     }
 
@@ -321,6 +334,13 @@ renderer.toneMappingExposure = baseExposure;
     group.rotation.x = Math.sin(elapsed * 0.8) * 0.5;
     group.rotation.z = Math.cos(elapsed * 0.8) * 0.5;
   }
+
+  let morphEnergy = 0;
+
+if (phase === "morph") {
+    const rawProgress = Math.min(phaseElapsed / MORPH_DURATION, 1);
+    morphEnergy = Math.sin(rawProgress * Math.PI);
+}
 
   const orbitTime = elapsed * 0.12;
 

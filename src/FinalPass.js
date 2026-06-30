@@ -12,7 +12,7 @@ const FinalPass = {
 
         grainStrength: { value: 0.025 },
 
-        chroma: { value: 0.0018 },
+        chroma: { value: 0.0008 },
         posterize:  { value: 5.0 },
         ditherStr:  { value: 0.8 }
 
@@ -141,32 +141,13 @@ vec2 offset =
 
             vec3 color = vec3(r,g,b);
 
-            // Contrasto morbido
-color = pow(color, vec3(0.7));
-color = clamp(color * 1.4, 0.0, 1.0);
-
-// Leggero S-Curve
-color = smoothstep(0.0, 1.0, color);
-
+            // Contrasto leggero, senza schiarire tutto
+            color = clamp(color, 0.0, 1.0);
 // Ombre leggermente fredde
 color.b += (1.0 - color.r) * 0.02;
 
 // Alte luci leggermente calde
 color.r += color.r * 0.015;
-
-            float vignette =
-
-                smoothstep(
-
-                    0.85,
-
-                    vignetteStrength,
-
-                    dist
-
-                );
-
-            color *= vignette;
 
             float grain =
 

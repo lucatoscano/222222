@@ -4,7 +4,7 @@ const vert = `
   varying vec2 vUv;
   void main(){
     vUv = uv;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    gl_Position = vec4(position.xy, 0.0, 1.0);
   }
 `;
 
@@ -32,8 +32,8 @@ const frag = `
     vec2 uv = vUv;
     vec2 px = uv * uResolution;
 
-    float cellX = 14.0;
-    float cellY = 10.0;
+    float cellX = 32.0;
+    float cellY = 24.0;
     vec2 cellId = floor(uv * vec2(cellX, cellY));
     vec2 cellUv = fract(uv * vec2(cellX, cellY));
 
@@ -48,12 +48,11 @@ const frag = `
     float band = smoothstep(0.45, 0.55, cellSeed) * cellShape;
 
     vec3 colA = vec3(0.0, 0.0, 0.0);
-    vec3 colB = vec3(0.45, 0.40, 0.0);
+    vec3 colB = vec3(0.65, 0.58, 0.0);
     vec3 col  = mix(colA, colB, band);
 
-    float dith = bayer4(px) * 0.6;
-    col += (dith - 0.5) * 0.05;
-    col = floor(col * 5.0 + 0.5) / 5.0;
+    float dith = bayer4(px);
+col = mix(colA, colB, step(0.5, band) * step(dith, 0.92));
 
     gl_FragColor = vec4(col, 1.0);
   }
@@ -61,7 +60,7 @@ const frag = `
 
 export default class BackgroundRenderer {
   constructor() {
-    const geometry = new THREE.PlaneGeometry(120, 120);
+    const geometry = new THREE.PlaneGeometry(2, 2);
     this.material = new THREE.ShaderMaterial({
       uniforms: {
         uTime: { value: 0 },
@@ -76,15 +75,11 @@ export default class BackgroundRenderer {
 
     this.mesh = new THREE.Mesh(geometry, this.material);
     this.mesh.renderOrder = -999;
-    this.mesh.position.z = -5;
     this.mesh.frustumCulled = false;
   }
 
-  update(elapsed, camera) {
+  update(elapsed) {
     this.material.uniforms.uTime.value = elapsed;
-    this.mesh.quaternion.copy(camera.quaternion);
-    this.mesh.position.copy(camera.position);
-    this.mesh.translateZ(-5);
   }
 
   triggerGridChange() {

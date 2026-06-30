@@ -23,7 +23,6 @@ const scene = new THREE.Scene();
 
 const bgScene = new THREE.Scene();
 const bgRenderer = new BackgroundRenderer();
-bgRenderer.mesh.layers.set(1);
 bgScene.add(bgRenderer.mesh);
 
 
@@ -42,19 +41,23 @@ const renderer = new THREE.WebGLRenderer({
 });
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 0.85;
+renderer.toneMappingExposure = 0.65;
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
 
 const composer = new EffectComposer(renderer);
-const renderPass = new RenderPass(scene, camera);
-composer.addPass(renderPass);
 
+const bgRenderPass = new RenderPass(bgScene, camera);
+composer.addPass(bgRenderPass);
+
+const renderPass = new RenderPass(scene, camera);
+renderPass.clear = false;
+composer.addPass(renderPass);
 const bloomPass = new UnrealBloomPass(
   new THREE.Vector2(window.innerWidth, window.innerHeight),
-  0.06,  // intensità
-  0.2,   // raggio
-  0.9   // threshold
+  0.5,  // intensità
+  0.4,   // raggio
+  0.8   // threshold
 );
 composer.addPass(bloomPass);
 const finalPass = new ShaderPass(FinalPass);
@@ -202,7 +205,7 @@ function animate() {
   const dt = Math.min(clock.getDelta(), 0.05);
   const elapsed = clock.elapsedTime;
   finalPass.uniforms.uTime.value = elapsed;
-  bgRenderer.update(elapsed, camera);
+  bgRenderer.update(elapsed);
 
 
   
@@ -318,17 +321,7 @@ bloomPass.radius =
   );
   
   controls.update();
-
-  // 1. Sfondo: render diretto, pulisce normalmente
-  renderer.autoClear = true;
-  renderer.setRenderTarget(null);
-  renderer.render(bgScene, camera);
-
-  // 2. Particelle + bloom + finalPass: il composer scrive SOPRA senza pulire
-  const prevClearColor = renderPass.clear;
-  renderPass.clear = false;
   composer.render();
-  renderPass.clear = prevClearColor;
 
 }
 

@@ -10,7 +10,7 @@ import { BokehPass } from "three/examples/jsm/postprocessing/BokehPass.js";
 import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass.js";
 import FinalPass from "./FinalPass.js";
 import ParticleField from "./ParticleField.js";
-
+import BackgroundRenderer from "./BackgroundRenderer.js";
 
 
 
@@ -21,6 +21,8 @@ const MAX_MODELS = 12;
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x090909);
+const bgRenderer = new BackgroundRenderer();
+scene.add(bgRenderer.mesh);
 
 
 
@@ -45,6 +47,8 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 const composer = new EffectComposer(renderer);
 const renderPass = new RenderPass(scene, camera);
 composer.addPass(renderPass);
+// Composer separato per il background — NIENTE bloom qui
+const bgScene = new THREE.Scene();
 
 const bloomPass = new UnrealBloomPass(
   new THREE.Vector2(window.innerWidth, window.innerHeight),
@@ -186,6 +190,7 @@ window.addEventListener("resize", () => {
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
   composer.setSize(window.innerWidth, window.innerHeight);
+  bgRenderer.resize();
 });
 
 const clock = new THREE.Clock();
@@ -196,6 +201,9 @@ function animate() {
   const dt = Math.min(clock.getDelta(), 0.05);
   const elapsed = clock.elapsedTime;
   finalPass.uniforms.uTime.value = elapsed;
+  bgRenderer.update(elapsed, camera);
+
+
   
   const cameraDistance = camera.position.length();
 
@@ -309,7 +317,13 @@ bloomPass.radius =
   );
   
   controls.update();
-  composer.render();
+
+  renderer.autoClear = true;
+  renderer.render(bgScene, camera);   // sfondo netto, senza bloom
+
+  renderer.autoClear = false;
+  composer.render();                  // particelle + bloom + finalPass sopra
+  renderer.autoClear = true;
 }
 
 init();

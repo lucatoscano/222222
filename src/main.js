@@ -213,8 +213,8 @@ bokehPass.materialBokeh.uniforms.focus.value =
       cloud.material.uniforms.uPointSize.value =
         THREE.MathUtils.lerp(0.018, 0.012, morphEnergy);
 
-      bloomPass.strength = THREE.MathUtils.lerp(0.05, 0.12, morphEnergy);
-      bloomPass.radius   = THREE.MathUtils.lerp(0.35, 0.55, morphEnergy);
+      bloomPass.strength = THREE.MathUtils.lerp(0.7, 1.0, morphEnergy);
+      bloomPass.radius   = THREE.MathUtils.lerp(0.7, 0.9, morphEnergy);
 
       renderer.toneMappingExposure =
         THREE.MathUtils.lerp(0.65, 0.85, morphEnergy);
@@ -228,8 +228,8 @@ bokehPass.materialBokeh.uniforms.focus.value =
 
         // Reset esplicito ai valori di riposo — niente più stacco
         // tra un morph e il successivo.
-        bloomPass.strength = 0.05;
-        bloomPass.radius = 0.35;
+        bloomPass.strength = 0.7;
+        bloomPass.radius = 0.7;
         renderer.toneMappingExposure = 0.65;
         cloud.material.uniforms.uPointSize.value = 0.018;
       }
